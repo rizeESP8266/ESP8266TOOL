@@ -1,0 +1,1419 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#0a0a0a">
+<title>Deauther Mobile</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;width:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,'Consolas',monospace;background:#0a0a0a;color:#e0e0e0;user-select:none;-webkit-user-select:none}
+body{position:fixed;inset:0}
+#viz{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none;z-index:1}
+.icon{width:20px;height:20px;display:block;flex-shrink:0;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.icon-sm{width:16px;height:16px}
+.icon-lg{width:22px;height:22px}
+.topbar{position:absolute;top:0;left:0;right:0;padding:calc(env(safe-area-inset-top,8px) + 8px) 12px 8px;display:flex;align-items:center;gap:8px;background:linear-gradient(180deg,rgba(10,10,10,.95) 0%,rgba(10,10,10,.6) 70%,transparent 100%);z-index:10;pointer-events:none}
+.topbar > *{pointer-events:auto}
+.tb-title{font-size:12px;font-weight:700;letter-spacing:1px;color:#fff;text-transform:uppercase}
+.tb-status{margin-left:auto;font-size:10px;font-weight:600;padding:5px 10px;border-radius:14px;border:1px solid #2a2a2a;color:#888;background:#1a1a1a;text-transform:uppercase;letter-spacing:.8px}
+.tb-status.on{background:#e0e0e0;border-color:#fff;color:#0a0a0a}
+.tb-btn{width:38px;height:38px;padding:0;display:flex;align-items:center;justify-content:center;background:rgba(20,20,20,.9);border:1px solid #2a2a2a;border-radius:10px;color:#d0d0d0;cursor:pointer;flex-shrink:0}
+.tb-btn:active{background:#333;color:#fff}
+.fabs{position:absolute;right:10px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:8px;z-index:9}
+.fab{width:48px;height:48px;padding:0;display:flex;align-items:center;justify-content:center;background:rgba(20,20,20,.92);border:1px solid #2a2a2a;border-radius:50%;color:#d0d0d0;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.6);transition:background .15s,color .15s,transform .1s}
+.fab:active{background:#e0e0e0;color:#0a0a0a;transform:scale(.94)}
+.fab.danger{color:#ff7b72;border-color:#5a1d1d}
+.fab.danger:active{background:#5a1d1d;color:#ffa198}
+.bottombar{position:absolute;left:0;right:0;bottom:0;padding:8px 12px calc(env(safe-area-inset-bottom,8px) + 8px);display:flex;align-items:center;gap:6px;background:linear-gradient(0deg,rgba(10,10,10,.95) 0%,rgba(10,10,10,.6) 70%,transparent 100%);z-index:9}
+.bb-btn{flex:1;min-width:0;height:50px;padding:0 8px;display:flex;align-items:center;justify-content:center;gap:6px;background:rgba(20,20,20,.92);border:1px solid #2a2a2a;border-radius:12px;color:#d0d0d0;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:background .15s,color .15s}
+.bb-btn:active{background:#e0e0e0;color:#0a0a0a}
+.bb-btn.primary{background:#e0e0e0;color:#0a0a0a;border-color:#fff}
+.bb-btn.danger{color:#ff7b72;border-color:#5a1d1d}
+.bb-btn.danger:active{background:#5a1d1d;color:#ffa198}
+.legend{position:absolute;left:10px;top:calc(env(safe-area-inset-top,8px) + 56px);padding:8px 10px;background:rgba(10,10,10,.82);border:1px solid #1f1f1f;border-radius:8px;font-size:10px;line-height:1.6;color:#666;text-transform:uppercase;letter-spacing:.8px;pointer-events:none;z-index:8;max-width:52vw}
+.legend span{color:#d0d0d0}
+.legend .row{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sheet-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.6);opacity:0;pointer-events:none;transition:opacity .2s;z-index:100}
+.sheet-backdrop.on{opacity:1;pointer-events:auto}
+.sheet{position:fixed;left:0;right:0;bottom:0;max-height:92vh;background:#0f0f0f;border-top:1px solid #2a2a2a;border-radius:18px 18px 0 0;transform:translateY(100%);transition:transform .25s cubic-bezier(.2,.7,.3,1);z-index:101;display:flex;flex-direction:column;padding-bottom:env(safe-area-inset-bottom,0)}
+.sheet.on{transform:translateY(0)}
+.sheet-handle{width:44px;height:4px;background:#3a3a3a;border-radius:2px;margin:10px auto 6px;flex-shrink:0}
+.sheet-head{padding:0 16px 12px;border-bottom:1px solid #1f1f1f;display:flex;align-items:center;gap:10px;flex-shrink:0}
+.sheet-title{font-size:13px;font-weight:700;color:#fff;text-transform:uppercase;letter-spacing:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0}
+.sheet-close{width:34px;height:34px;padding:0;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:#1a1a1a;border:1px solid #2a2a2a;border-radius:8px;color:#d0d0d0;cursor:pointer}
+.sheet-close:active{background:#333}
+.sheet-body{overflow-y:auto;overflow-x:hidden;padding:12px 14px 20px;-webkit-overflow-scrolling:touch;flex:1}
+.sheet-body::-webkit-scrollbar{width:4px}
+.sheet-body::-webkit-scrollbar-thumb{background:#333;border-radius:2px}
+.sheet h3{font-size:10.5px;color:#fff;text-transform:uppercase;letter-spacing:1.2px;padding:16px 2px 8px;border-bottom:1px solid #2a2a2a;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.sheet h3:first-child{padding-top:4px}
+.sheet h3 .h3-sub{font-size:9.5px;color:#666;text-transform:none;letter-spacing:.5px;font-weight:400;margin-left:auto}
+.sheet h4{font-size:10px;color:#666;text-transform:uppercase;letter-spacing:1px;padding:12px 2px 6px;margin-bottom:4px;font-weight:500}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px}
+.row-input{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:stretch;margin-bottom:8px}
+.sheet button.mbtn,.sheet input[type=text],.sheet input[type=number],.sheet input[type=password]{width:100%;min-height:48px;padding:10px 12px;background:#1a1a1a;color:#d0d0d0;border:1px solid #2a2a2a;border-radius:10px;font-family:inherit;font-size:14px;transition:background .1s,border-color .1s,color .1s}
+.sheet button.mbtn{cursor:pointer;text-align:left;font-weight:500;display:flex;align-items:center;gap:10px}
+.sheet button.mbtn:active{background:#e0e0e0;color:#0a0a0a;border-color:#fff}
+.sheet button.mbtn.primary{background:#e0e0e0;color:#0a0a0a;border-color:#fff;font-weight:600}
+.sheet button.mbtn.primary:active{background:#fff}
+.sheet button.mbtn.danger{color:#ff7b72;border-color:#5a1d1d}
+.sheet button.mbtn.danger:active{background:#5a1d1d;color:#ffa198}
+.sheet button.mbtn.full{justify-content:center;text-align:center}
+.sheet input{outline:none}
+.sheet input:focus{border-color:#666}
+.sheet input::placeholder{color:#555}
+.sheet input[type=number]{text-align:center}
+.sheet label.chk{display:flex;align-items:center;gap:8px;background:#1a1a1a;border:1px solid #2a2a2a;border-radius:10px;padding:0 12px;min-height:48px;font-size:13px;color:#d0d0d0;cursor:pointer;width:100%}
+.sheet label.chk input{width:18px;height:18px;accent-color:#e0e0e0;flex-shrink:0}
+.ssid-list{background:#0a0a0a;border:1px solid #1f1f1f;border-radius:10px;padding:6px 4px;margin-bottom:10px;max-height:180px;overflow-y:auto}
+.ssid-list::-webkit-scrollbar{width:4px}
+.ssid-list::-webkit-scrollbar-thumb{background:#333;border-radius:2px}
+.ssid-list .empty{color:#555;font-size:11px;text-align:center;padding:12px 4px}
+.ssid-row{display:grid;grid-template-columns:36px 1fr auto;gap:8px;align-items:center;padding:6px 10px;font-size:12.5px;color:#d0d0d0;border-radius:6px}
+.ssid-row:hover{background:#151515}
+.ssid-row .ssid-id{color:#666;font-size:11px}
+.ssid-row .ssid-name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ssid-row .ssid-name.wpa2::before{content:'🔒 '}
+.ssid-row .ssid-count{color:#888;font-size:11px;font-variant-numeric:tabular-nums}
+.pt-info{font-size:11px;color:#666;line-height:1.6;padding:0 2px 12px;border-bottom:1px solid #1f1f1f;margin-bottom:10px}
+.pt-info b{color:#d0d0d0;font-weight:400}
+.pt-ssid{font-size:16px;color:#fff;font-weight:600;word-break:break-word;padding:4px 2px 2px;line-height:1.3}
+.log-box{height:42vh;background:#0a0a0a;border:1px solid #1f1f1f;border-radius:10px;padding:10px 12px;overflow-y:auto;font-family:'Consolas','Courier New',monospace;font-size:11.5px;line-height:1.55;white-space:pre-wrap;word-break:break-all;-webkit-overflow-scrolling:touch}
+.log-box::-webkit-scrollbar{width:4px}
+.log-box::-webkit-scrollbar-thumb{background:#333;border-radius:2px}
+.log-box .in{color:#d0d0d0}
+.log-box .out{color:#fff;font-weight:600}
+.log-box .err{color:#ff7b72}
+.log-box .info{color:#fff}
+.log-box .sys{color:#777}
+.log-actions{display:flex;gap:8px;margin-top:10px}
+</style>
+</head>
+<body>
+
+<canvas id="viz"></canvas>
+
+<div class="topbar">
+  <div class="tb-title">Deauther</div>
+  <button class="tb-btn" id="tbConnect" title="Подключить">
+    <svg class="icon" viewBox="0 0 24 24"><path d="M12 2v10"/><path d="M18.36 6.64a9 9 0 1 1-12.73 0"/></svg>
+  </button>
+  <div class="tb-status off" id="tbStatus">off</div>
+</div>
+
+<div class="legend">
+  <div class="row">ESP: <span id="lgEsp">off</span></div>
+  <div class="row">AP: <span id="lgAp">0</span> · Цель: <span id="lgSel">0</span></div>
+  <div class="row">Zoom: <span id="lgZoom">1.0x</span></div>
+  <div class="row">Авто: <span id="lgAuto">off</span></div>
+</div>
+
+<div class="fabs">
+  <button class="fab" id="fabScan" title="Скан">
+    <svg class="icon icon-lg" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-3-6.7"/><polyline points="21 3 21 9 15 9"/></svg>
+  </button>
+  <button class="fab" id="fabFit" title="Вписать">
+    <svg class="icon icon-lg" viewBox="0 0 24 24"><polyline points="4 9 4 4 9 4"/><polyline points="15 4 20 4 20 9"/><polyline points="20 15 20 20 15 20"/><polyline points="9 20 4 20 4 15"/></svg>
+  </button>
+  <button class="fab" id="fabReset" title="Сброс">
+    <svg class="icon icon-lg" viewBox="0 0 24 24"><path d="M3 12l9-9 9 9"/><path d="M5 10v10h14V10"/></svg>
+  </button>
+  <button class="fab danger" id="fabStop" title="Стоп">
+    <svg class="icon icon-lg" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="1.5"/></svg>
+  </button>
+  <button class="fab danger" id="fabDeauth" title="Deauth">
+    <svg class="icon icon-lg" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+  </button>
+</div>
+
+<div class="bottombar">
+  <button class="bb-btn" id="bbSelect">
+    <svg class="icon icon-sm" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3"/></svg>
+    <span>Цель</span>
+  </button>
+  <button class="bb-btn danger" id="bbDeauth">
+    <svg class="icon icon-sm" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+    <span>Deauth</span>
+  </button>
+  <button class="bb-btn" id="bbLog">
+    <svg class="icon icon-sm" viewBox="0 0 24 24"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="14" y2="18"/></svg>
+    <span>Лог</span>
+  </button>
+  <button class="bb-btn primary" id="bbMenu">
+    <svg class="icon icon-sm" viewBox="0 0 24 24"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg>
+    <span>Меню</span>
+  </button>
+</div>
+
+<div class="sheet-backdrop" id="backdrop"></div>
+
+<div class="sheet" id="sheetMenu">
+  <div class="sheet-handle"></div>
+  <div class="sheet-head">
+    <div class="sheet-title">Меню</div>
+    <button class="sheet-close" id="closeMenu">
+      <svg class="icon" viewBox="0 0 24 24"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
+    </button>
+  </div>
+  <div class="sheet-body">
+
+    <h3>
+      <svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M12 2v10"/><path d="M18.36 6.64a9 9 0 1 1-12.73 0"/></svg>
+      Подключение
+    </h3>
+    <button class="mbtn primary full" id="mBtnConnect">Подключить</button>
+    <button class="mbtn full" id="mBtnDisconnect" disabled>Отключить</button>
+
+    <h3>
+      <svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><circle cx="12" cy="20" r="1"/></svg>
+      Scan
+    </h3>
+    <div class="grid2">
+      <button class="mbtn" id="mScanAP">Скан AP</button>
+      <button class="mbtn" id="mScanSta">Скан клиентов</button>
+      <button class="mbtn" id="mScanAll">Скан всё</button>
+      <button class="mbtn" id="mStopScan">Стоп скан</button>
+    </div>
+    <div class="grid2">
+      <button class="mbtn" id="mShowAP">Показать AP</button>
+      <button class="mbtn" id="mShowSta">Показать клиентов</button>
+      <button class="mbtn" id="mShowNames">Показать имена</button>
+      <button class="mbtn" id="mShowSelected">Показать выбранные</button>
+    </div>
+
+    <h4>Настройки Scan</h4>
+    <div class="row-input">
+      <input type="number" id="cfgScanTimeout" placeholder="Таймаут, сек" min="1" max="120">
+      <label class="chk" style="min-width:120px">
+        <input type="checkbox" id="cfgScanContinue">
+        Цикл
+      </label>
+    </div>
+    <div class="row-input">
+      <input type="number" id="cfgScanChannel" placeholder="Канал (0=все)" min="0" max="14">
+      <button class="mbtn" id="mAutoScan" style="min-width:140px;justify-content:center">Авто-скан: выкл</button>
+    </div>
+
+    <h3>
+      <svg class="icon icon-sm" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+      Attack
+    </h3>
+    <button class="mbtn danger full" id="mDeauth">Deauth — выбранные</button>
+    <button class="mbtn danger full" id="mDeauthAll">Deauth — все AP</button>
+    <div class="grid2">
+      <button class="mbtn danger" id="mAttackBeacon">Beacon spam</button>
+      <button class="mbtn danger" id="mAttackProbe">Probe flood</button>
+    </div>
+    <div class="grid2">
+      <button class="mbtn" id="mAttackStatus">Статус атаки</button>
+      <button class="mbtn" id="mStopAttack">Стоп атака</button>
+    </div>
+    <button class="mbtn full" id="mStopAll">Стоп всё</button>
+
+    <h4>Настройки Attack</h4>
+    <div class="row-input">
+      <input type="number" id="cfgAttackTimeout" placeholder="Таймаут, сек (0=∞)" min="0" max="600">
+      <label class="chk" style="min-width:120px">
+        <input type="checkbox" id="cfgAttackNoOutput">
+        Тихо
+      </label>
+    </div>
+    <div class="grid2">
+      <button class="mbtn" id="mAttackStatusOn">Статус: вкл</button>
+      <button class="mbtn" id="mAttackStatusOff">Статус: выкл</button>
+    </div>
+
+    <h3>
+      <svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M4 4h16v12H5.17L4 17.17V4z"/></svg>
+      Spam
+    </h3>
+
+    <h4>Добавить SSID</h4>
+    <input type="text" id="mSsidName" placeholder="Название сети" maxlength="31">
+    <div class="row-input">
+      <input type="number" id="mSsidCount" placeholder="Клонов (1-60)" min="1" max="60" value="1">
+      <label class="chk" style="min-width:120px">
+        <input type="checkbox" id="mSsidWpa2">
+        WPA2
+      </label>
+    </div>
+    <label class="chk" style="margin-bottom:8px">
+      <input type="checkbox" id="mSsidForce">
+      Force (даже если список полон)
+    </label>
+    <button class="mbtn primary full" id="mAddSsid">Добавить SSID</button>
+
+    <h4>Массово</h4>
+    <button class="mbtn full" id="mAddSsidSelected">Клонировать выбранные AP</button>
+    <div class="row-input">
+      <input type="number" id="mCloneApId" placeholder="ID точки" min="0">
+      <button class="mbtn" id="mCloneAp" style="min-width:140px;justify-content:center">Клонировать по ID</button>
+    </div>
+
+    <h4>Случайные</h4>
+    <div class="row-input">
+      <input type="number" id="cfgRandomInterval" placeholder="Интервал, сек" min="5" max="60">
+      <button class="mbtn" id="mRandomSsid" style="min-width:120px;justify-content:center">Вкл</button>
+    </div>
+    <button class="mbtn full" id="mRandomOff">Выключить случайные</button>
+
+    <h4>Список SSID</h4>
+    <div class="ssid-list" id="ssidList"><div class="empty">пусто</div></div>
+    <div class="grid2">
+      <button class="mbtn" id="mRefreshSsid">Обновить</button>
+      <button class="mbtn danger" id="mRemoveAllSsid">Удалить все</button>
+    </div>
+    <div class="row-input">
+      <input type="number" id="mRemoveSsidId" placeholder="ID для удаления" min="0">
+      <button class="mbtn" id="mRemoveSsid" style="min-width:140px;justify-content:center">Удалить SSID</button>
+    </div>
+    <div class="grid2">
+      <button class="mbtn" id="mSaveSsid">Save SSID</button>
+      <button class="mbtn" id="mLoadSsid">Load SSID</button>
+    </div>
+
+    <h3>
+      <svg class="icon icon-sm" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      Система
+    </h3>
+
+    <h4>Настройки сети</h4>
+    <input type="text" id="mSsid" placeholder="Новый SSID точки (1-31)" maxlength="31">
+    <button class="mbtn full" id="mSetSsid">Сменить SSID точки</button>
+    <input type="password" id="mPass" placeholder="Новый пароль (8-31)" minlength="8" maxlength="31">
+    <button class="mbtn full" id="mSetPass">Сменить пароль точки</button>
+    <div class="grid2">
+      <button class="mbtn" id="mGetSsid">Текущий SSID</button>
+      <button class="mbtn primary" id="mSaveSettings">Сохранить</button>
+    </div>
+
+    <h4>LED</h4>
+    <div class="grid3">
+      <button class="mbtn" id="mLedOff">Выкл</button>
+      <button class="mbtn" id="mLedRed">Красный</button>
+      <button class="mbtn" id="mLedGreen">Зелёный</button>
+    </div>
+    <button class="mbtn full" id="mLedWhite">Белый</button>
+
+    <h4>Общее</h4>
+    <div class="grid2">
+      <button class="mbtn" id="mInfo">Sysinfo</button>
+      <button class="mbtn" id="mSave">Save</button>
+      <button class="mbtn" id="mReboot">Reboot</button>
+      <button class="mbtn" id="mHelp">Help</button>
+    </div>
+    <button class="mbtn danger full" id="mClear">Clear (ESP + карта)</button>
+
+    <h4>Своя команда</h4>
+    <input type="text" id="mCustom" placeholder="например: set channel 6">
+    <button class="mbtn primary full" id="mSend">Отправить</button>
+
+  </div>
+</div>
+
+<div class="sheet" id="sheetLog">
+  <div class="sheet-handle"></div>
+  <div class="sheet-head">
+    <div class="sheet-title">Вывод</div>
+    <button class="sheet-close" id="closeLog">
+      <svg class="icon" viewBox="0 0 24 24"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
+    </button>
+  </div>
+  <div class="sheet-body">
+    <div class="log-box" id="logBox"></div>
+    <div class="log-actions">
+      <button class="mbtn" id="mClearLog">Очистить лог</button>
+    </div>
+  </div>
+</div>
+
+<div class="sheet" id="sheetPoint">
+  <div class="sheet-handle"></div>
+  <div class="sheet-head">
+    <div class="sheet-title" id="ptTitle">Точка</div>
+    <button class="sheet-close" id="closePoint">
+      <svg class="icon" viewBox="0 0 24 24"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
+    </button>
+  </div>
+  <div class="sheet-body">
+    <div class="pt-ssid" id="ptSsid">—</div>
+    <div class="pt-info" id="ptInfo"></div>
+
+    <button class="mbtn full" id="ptSelect">Выбрать как цель</button>
+    <button class="mbtn full" id="ptDeselect">Снять выбор</button>
+    <button class="mbtn danger full" id="ptDeauth">Deauth эту точку</button>
+    <button class="mbtn full" id="ptCenter">Центрировать</button>
+    <button class="mbtn full" id="ptCopyMac">Копировать MAC</button>
+    <button class="mbtn danger full" id="ptHide">Скрыть с карты</button>
+  </div>
+</div>
+
+<script>
+(function(){
+  var state = {
+    connected: false, scanning: false, attacking: false, espPulse: 0,
+    targets: [], attackRings: [], packets: [],
+    lastCmd: '',
+    autoScan: { enabled:false, interval:30000, timer:null, lastRun:0 },
+    view: { x:0, y:0, zoom:1, minZoom:0.10, maxZoom:4 },
+    pointTarget: null,
+    ssidList: []
+  };
+
+  var RING_LEVELS = [
+    { rssi: -50,  world: 200,  label: '-50' },
+    { rssi: -65,  world: 600,  label: '-65' },
+    { rssi: -80,  world: 1100, label: '-80' },
+    { rssi: -95,  world: 1700, label: '-95' },
+    { rssi: -110, world: 2400, label: '-110' },
+    { rssi: -125, world: 3200, label: '-125' }
+  ];
+
+  var CFG_KEY = 'deauther_cfg_v1';
+  var CFG_DEFAULTS = {
+    scanTimeout: 10,
+    scanContinue: false,
+    scanChannel: 0,
+    attackTimeout: 0,
+    attackNoOutput: false,
+    randomInterval: 10,
+    ssidCount: 1,
+    ssidWpa2: false,
+    ssidForce: false
+  };
+  var cfg = loadCfg();
+
+  function loadCfg(){
+    try{
+      var s = localStorage.getItem(CFG_KEY);
+      if(s){
+        var parsed = JSON.parse(s);
+        var out = {};
+        Object.keys(CFG_DEFAULTS).forEach(function(k){
+          out[k] = (k in parsed) ? parsed[k] : CFG_DEFAULTS[k];
+        });
+        return out;
+      }
+    }catch(e){}
+    var fresh = {};
+    Object.keys(CFG_DEFAULTS).forEach(function(k){ fresh[k] = CFG_DEFAULTS[k]; });
+    return fresh;
+  }
+  function saveCfg(){
+    try{ localStorage.setItem(CFG_KEY, JSON.stringify(cfg)); }catch(e){}
+  }
+
+  var port=null, reader=null, writer=null, keepReading=false;
+  var decoder=new TextDecoder(), encoder=new TextEncoder();
+  var $=function(id){return document.getElementById(id)};
+  var logBox=$('logBox'), statusEl=$('tbStatus');
+  var lgEsp=$('lgEsp'), lgAp=$('lgAp'), lgSel=$('lgSel'), lgZoom=$('lgZoom'), lgAuto=$('lgAuto');
+  var canvas=$('viz'), ctx=canvas.getContext('2d');
+  var W=0,H=0,DPR=1;
+  var rxBuffer = '';
+
+  function append(text,cls){
+    if(cls==='in'&&text.startsWith('>'))cls='out';
+    var s=document.createElement('span');
+    s.className=cls||'sys';
+    s.textContent=text;
+    logBox.appendChild(s);
+    logBox.scrollTop=logBox.scrollHeight;
+  }
+  function clearLog(){logBox.textContent=''}
+
+  function setStatus(t,m){
+    statusEl.textContent=t;
+    statusEl.className='tb-status '+(m||'off');
+    lgEsp.textContent=t;
+  }
+
+  async function connect(){
+    if(!('serial' in navigator)){
+      alert('Web Serial API не поддерживается.');
+      return;
+    }
+    try{
+      port=await navigator.serial.requestPort();
+      await port.open({baudRate:115200});
+      writer=port.writable.getWriter();
+      state.connected=true;
+      setStatus('online','on');
+      append('=== Connected ===\n','info');
+      keepReading=true;
+      rxBuffer='';
+      readLoop();
+      $('mBtnConnect').disabled=true;
+      $('mBtnDisconnect').disabled=false;
+    }catch(e){
+      append('Connect error: '+e.message+'\n','err');
+      setStatus('off','off');
+    }
+  }
+  async function disconnect(){
+    keepReading=false;
+    stopAutoScan();
+    try{if(reader)await reader.cancel()}catch(e){}
+    try{if(writer)writer.releaseLock()}catch(e){}
+    try{if(port)await port.close()}catch(e){}
+    port=reader=writer=null;
+    state.connected=false;
+    state.attacking=false;
+    rxBuffer='';
+    setStatus('off','off');
+    append('=== Disconnected ===\n','info');
+    $('mBtnConnect').disabled=false;
+    $('mBtnDisconnect').disabled=true;
+    updateBadge();
+  }
+  async function readLoop(){
+    while(port&&port.readable&&keepReading){
+      reader=port.readable.getReader();
+      try{
+        while(true){
+          var r=await reader.read();
+          if(r.done)break;
+          if(r.value)handleIncoming(decoder.decode(r.value));
+        }
+      }catch(e){if(keepReading)append('Read error: '+e.message+'\n','err')}
+      finally{try{reader.releaseLock()}catch(e){}}
+    }
+  }
+  async function send(cmd){
+    if(!writer){append('Not connected.\n','err');return}
+    try{
+      await writer.write(encoder.encode(cmd.trim()+'\n'));
+      state.lastCmd=cmd.trim();
+      append('> '+cmd.trim()+'\n','out');
+    }catch(e){append('Send error: '+e.message+'\n','err')}
+  }
+  function sendQuiet(cmd){
+    if(!writer) return;
+    writer.write(encoder.encode(cmd.trim()+'\n')).catch(function(){});
+    append('> '+cmd.trim()+'\n','out');
+  }
+
+  function startAutoScan(){
+    if(state.autoScan.timer) clearInterval(state.autoScan.timer);
+    state.autoScan.enabled = true;
+    $('mAutoScan').textContent = 'Авто-скан: вкл';
+    lgAuto.textContent = 'on';
+    state.autoScan.timer = setInterval(autoScanTick, state.autoScan.interval);
+    append('Auto-scan ON\n','sys');
+  }
+  function stopAutoScan(){
+    if(state.autoScan.timer){clearInterval(state.autoScan.timer);state.autoScan.timer=null}
+    state.autoScan.enabled = false;
+    if($('mAutoScan')) $('mAutoScan').textContent = 'Авто-скан: выкл';
+    if(lgAuto) lgAuto.textContent = 'off';
+  }
+  function autoScanTick(){
+    if(!state.connected) return;
+    if(state.attacking || state.scanning) return;
+    if(Date.now() - state.autoScan.lastRun < 3000) return;
+    state.autoScan.lastRun = Date.now();
+    send('show aps');
+  }
+
+  function handleIncoming(text){
+    append(text,'in');
+
+    if(/Starting scan for access points|Starting scan for stations/i.test(text)){
+      state.scanning=true; updateBadge();
+    }
+    if(/Stopped scan|Scan results saved/i.test(text)){
+      state.scanning=false; updateBadge();
+    }
+    if(/Starting attack|Attacking/i.test(text)){
+      state.attacking=true; updateBadge();
+    }
+    if(/Stopped attacking|Timeout/i.test(text)){
+      state.attacking=false; updateBadge();
+    }
+
+    var m=text.match(/Deauths:\s*(\d+)\/(\d+)/);
+    if(m && parseInt(m[1])>0){
+      state.attacking=true; updateBadge();
+      var n=Math.min(parseInt(m[1]), 12);
+      for(var i=0;i<n;i++) spawnPacket();
+    }
+
+    rxBuffer += text;
+    var parts = rxBuffer.split(/\r?\n/);
+    rxBuffer = parts.pop();
+
+    for(var j=0;j<parts.length;j++){
+      var line = parts[j];
+      if(!line) continue;
+      parseAPLine(line);
+      parseSSIDLine(line);
+    }
+    updateCounters();
+  }
+
+  function parseAPLine(line){
+    if(!line) return false;
+    if(/^\s*$/.test(line)) return false;
+    if(/^\s*[=\-]{5,}\s*$/.test(line)) return false;
+
+    var mId = line.match(/^\s*(\d+)\s+(.+)$/);
+    if(!mId) return false;
+
+    var id = parseInt(mId[1]);
+    var rest = mId[2].trim();
+    if(!rest) return false;
+
+    var macMatch = rest.match(/([0-9a-fA-F]{2}:){5}[0-9a-fA-F]{2}/);
+    var mac = macMatch ? macMatch[0].toLowerCase() : null;
+    var beforeMac = macMatch ? rest.substring(0, rest.indexOf(macMatch[0])).trim() : rest;
+    if(!beforeMac) return false;
+
+    var re = /-?\d+/g;
+    var mm, nums = [];
+    while((mm = re.exec(beforeMac)) !== null){
+      nums.push({ v: parseInt(mm[0]), i: mm.index });
+    }
+    if(nums.length < 2) return false;
+
+    var last = nums[nums.length - 1];
+    var prev = nums[nums.length - 2];
+    var rssi = last.v;
+    var ch = prev.v;
+
+    if(rssi > 0 || rssi < -130) return false;
+    if(ch < 1 || ch > 200) return false;
+
+    var ssidEnd = prev.i;
+    var ssid = beforeMac.substring(0, ssidEnd).replace(/\s+$/,'').trim();
+    if(!ssid) return false;
+    if(/^ID$/i.test(ssid)) return false;
+
+    addTarget(id, ssid, ch, rssi, mac);
+    return true;
+  }
+
+  function parseSSIDLine(line){
+    if(!line) return;
+    if(!/^\s*\d+\s+/.test(line)) return;
+    var m = line.match(/^\s*(\d+)\s+(.+?)\s+(\d+)\s*$/);
+    if(!m) return;
+    var id = parseInt(m[1]);
+    var name = m[2].trim();
+    var count = parseInt(m[3]);
+    if(!name || name.length < 1) return;
+    if(name.length > 40) return;
+    if(isNaN(count)) return;
+    if(count < 1 || count > 100) return;
+    if(/SSID|Name\s+Ch|Selected|Vendor/i.test(line)) return;
+
+    var existing = null;
+    for(var i=0;i<state.ssidList.length;i++){
+      if(state.ssidList[i].id === id){ existing = state.ssidList[i]; break; }
+    }
+    if(existing){
+      existing.name = name;
+      existing.count = count;
+    } else {
+      state.ssidList.push({id: id, name: name, count: count});
+    }
+    renderSsidList();
+  }
+
+  function rssiToWorld(rssi){
+    var levels = RING_LEVELS.slice().sort(function(a,b){return b.rssi-a.rssi});
+    if(rssi >= levels[0].rssi) return 40;
+    if(rssi <= levels[levels.length-1].rssi) return levels[levels.length-1].world;
+    for(var i=0;i<levels.length-1;i++){
+      var hi = levels[i], lo = levels[i+1];
+      if(rssi <= hi.rssi && rssi >= lo.rssi){
+        var t = (hi.rssi - rssi) / (hi.rssi - lo.rssi);
+        return hi.world + (lo.world - hi.world) * t;
+      }
+    }
+    return levels[levels.length-1].world;
+  }
+
+  function addTarget(id,ssid,ch,rssi,mac){
+    for(var i=0;i<state.targets.length;i++){
+      if(state.targets[i].id===id){
+        var t = state.targets[i];
+        t.ssid=ssid; t.ch=ch; t.rssi=rssi;
+        if(mac) t.mac = mac;
+        t.world = rssiToWorld(rssi);
+        t.wx = Math.cos(t.angle) * t.world;
+        t.wy = Math.sin(t.angle) * t.world;
+        return;
+      }
+    }
+    var angle = pickAngle();
+    var world = rssiToWorld(rssi);
+    state.targets.push({
+      id:id, ssid:ssid, ch:ch, rssi:rssi,
+      mac: mac || null,
+      selected:false, hidden:false,
+      angle:angle, world:world,
+      wx: Math.cos(angle)*world,
+      wy: Math.sin(angle)*world,
+      flash:0
+    });
+  }
+  function pickAngle(){
+    if(state.targets.length === 0) return Math.random()*Math.PI*2;
+    var best = 0, bestDist = -1;
+    for(var tries=0; tries<32; tries++){
+      var a = Math.random()*Math.PI*2;
+      var minDist = Infinity;
+      for(var i=0;i<state.targets.length;i++){
+        var d = Math.abs(angleDiff(a, state.targets[i].angle));
+        if(d < minDist) minDist = d;
+      }
+      if(minDist > bestDist){ bestDist = minDist; best = a; }
+    }
+    return best;
+  }
+  function angleDiff(a,b){
+    var d = a - b;
+    while(d > Math.PI) d -= Math.PI*2;
+    while(d < -Math.PI) d += Math.PI*2;
+    return d;
+  }
+  function markSelected(id){
+    for(var i=0;i<state.targets.length;i++)
+      state.targets[i].selected = (state.targets[i].id === id);
+    updateCounters();
+  }
+  function updateCounters(){
+    var visible=0, sel=0;
+    for(var i=0;i<state.targets.length;i++){
+      if(!state.targets[i].hidden) visible++;
+      if(state.targets[i].selected) sel++;
+    }
+    lgAp.textContent=visible;
+    lgSel.textContent=sel;
+  }
+  function updateBadge(){
+    if(state.attacking){statusEl.textContent='atk';statusEl.className='tb-status on';return}
+    if(state.scanning){statusEl.textContent='scan';statusEl.className='tb-status on';return}
+    if(state.connected){statusEl.textContent='idle';statusEl.className='tb-status on';return}
+    statusEl.textContent='off';statusEl.className='tb-status off';
+  }
+
+  function renderSsidList(){
+    var box = $('ssidList');
+    if(!box) return;
+    if(!state.ssidList.length){
+      box.innerHTML = '<div class="empty">пусто</div>';
+      return;
+    }
+    var html = '';
+    for(var i=0;i<state.ssidList.length;i++){
+      var s = state.ssidList[i];
+      html += '<div class="ssid-row">' +
+        '<span class="ssid-id">'+s.id+'</span>' +
+        '<span class="ssid-name">'+escapeHtml(s.name)+'</span>' +
+        '<span class="ssid-count">×'+s.count+'</span>' +
+      '</div>';
+    }
+    box.innerHTML = html;
+  }
+  function escapeHtml(s){
+    return String(s).replace(/[&<>"']/g, function(c){
+      return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c];
+    });
+  }
+
+  function resize(){
+    DPR=Math.min(window.devicePixelRatio||1, 2);
+    W=window.innerWidth;
+    H=window.innerHeight;
+    canvas.width=W*DPR; canvas.height=H*DPR;
+    canvas.style.width=W+'px'; canvas.style.height=H+'px';
+    ctx.setTransform(DPR,0,0,DPR,0,0);
+  }
+  window.addEventListener('resize',resize);
+  window.addEventListener('orientationchange',function(){setTimeout(resize,200)});
+
+  function w2s(wx,wy){
+    return {
+      x: W/2 + (wx - state.view.x) * state.view.zoom,
+      y: H/2 + (wy - state.view.y) * state.view.zoom
+    };
+  }
+  function s2w(sx,sy){
+    return {
+      x: (sx - W/2) / state.view.zoom + state.view.x,
+      y: (sy - H/2) / state.view.zoom + state.view.y
+    };
+  }
+
+  function spawnPacket(){
+    var sel = state.targets.filter(function(x){return x.selected && !x.hidden});
+    var tx, ty, targetId = null;
+    if(sel.length){
+      var t = sel[Math.floor(Math.random()*sel.length)];
+      tx = t.wx; ty = t.wy; targetId = t.id;
+    } else {
+      var a = Math.random()*Math.PI*2;
+      tx = Math.cos(a) * 900; ty = Math.sin(a) * 900;
+    }
+    state.packets.push({
+      sx:0, sy:0, tx:tx, ty:ty,
+      t:0, speed:0.025 + Math.random()*0.015,
+      targetId: targetId
+    });
+  }
+
+  var time=0;
+  function draw(){
+    time+=0.016;
+    ctx.clearRect(0,0,W,H);
+    drawGrid();
+    drawRings();
+    drawEsp();
+    drawTargets();
+    drawPackets();
+    drawAttackRings();
+    requestAnimationFrame(draw);
+  }
+  function drawGrid(){
+    var z=state.view.zoom;
+    var step=60*z;
+    if(step<15) step=15*Math.ceil(15/step);
+    if(step>240) step=240;
+    var originX = W/2 - state.view.x * z;
+    var originY = H/2 - state.view.y * z;
+    var startX = ((originX % step) + step) % step;
+    var startY = ((originY % step) + step) % step;
+    ctx.strokeStyle='rgba(255,255,255,0.035)';
+    ctx.lineWidth=1;
+    for(var x=startX;x<W;x+=step){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke()}
+    for(var y=startY;y<H;y+=step){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke()}
+  }
+  function drawRings(){
+    var esp = w2s(0,0);
+    for(var i=0;i<RING_LEVELS.length;i++){
+      var lv = RING_LEVELS[i];
+      var rPix = lv.world * state.view.zoom;
+      if(rPix < 12) continue;
+      ctx.beginPath();
+      ctx.arc(esp.x, esp.y, rPix, 0, Math.PI*2);
+      ctx.strokeStyle = 'rgba(255,255,255,0.09)';
+      ctx.lineWidth = 1;
+      ctx.setLineDash([3, 8]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = 'rgba(255,255,255,0.28)';
+      ctx.font = '9px Consolas, monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText(lv.label, esp.x, esp.y - rPix - 4);
+    }
+  }
+  function drawEsp(){
+    var esp = w2s(0,0);
+    var cx = esp.x, cy = esp.y;
+    var baseR = 13 * Math.min(state.view.zoom, 2);
+    if(baseR < 7) baseR = 7;
+    if(baseR > 30) baseR = 30;
+    var pulseR = baseR;
+    if(state.connected){
+      state.espPulse = 0.5 + 0.5*Math.sin(time*3);
+      pulseR = baseR + 3*state.espPulse;
+    } else state.espPulse = 0;
+    if(state.connected){
+      var g = ctx.createRadialGradient(cx,cy,0,cx,cy,60);
+      g.addColorStop(0,'rgba(255,255,255,'+(0.3+0.2*state.espPulse)+')');
+      g.addColorStop(1,'rgba(255,255,255,0)');
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(cx,cy,60,0,Math.PI*2); ctx.fill();
+    }
+    ctx.beginPath(); ctx.arc(cx,cy,pulseR,0,Math.PI*2);
+    ctx.fillStyle = state.connected ? '#fff' : '#333'; ctx.fill();
+    ctx.beginPath(); ctx.arc(cx,cy,pulseR+6,0,Math.PI*2);
+    ctx.strokeStyle = state.connected ? 'rgba(255,255,255,0.5)' : 'rgba(255,255,255,0.1)';
+    ctx.lineWidth=1; ctx.stroke();
+    ctx.fillStyle = state.connected ? '#fff' : '#666';
+    ctx.font='10px Consolas, monospace';
+    ctx.textAlign='center';
+    ctx.fillText('ESP', cx, cy + baseR + 20);
+  }
+  function drawTargets(){
+    var esp = w2s(0,0);
+    for(var i=0;i<state.targets.length;i++){
+      var t = state.targets[i];
+      if(t.hidden) continue;
+      var p = w2s(t.wx, t.wy);
+      var attackingThis = state.attacking && t.selected;
+      var isTarget = t.selected;
+      var rBase = t.selected ? 7 : 5;
+      var r = rBase * Math.min(state.view.zoom, 1.6);
+      if(r < 5) r = 5;
+
+      if(isTarget){
+        var pulse = (time*1.6) % 1;
+        var pulseR = r + 6 + pulse*14;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, pulseR, 0, Math.PI*2);
+        ctx.strokeStyle = 'rgba(255,255,255,'+(0.5*(1-pulse))+')';
+        ctx.lineWidth = 1.2; ctx.stroke();
+      }
+      if(attackingThis){
+        t.flash = 0.5 + 0.5*Math.sin(time*8);
+        var gr = ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,32*state.view.zoom);
+        gr.addColorStop(0,'rgba(255,60,60,'+(0.5+0.3*t.flash)+')');
+        gr.addColorStop(1,'rgba(255,60,60,0)');
+        ctx.fillStyle = gr;
+        ctx.beginPath(); ctx.arc(p.x,p.y,32*state.view.zoom,0,Math.PI*2); ctx.fill();
+      } else if(isTarget){
+        var g = ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,26*state.view.zoom);
+        g.addColorStop(0,'rgba(255,255,255,0.35)');
+        g.addColorStop(1,'rgba(255,255,255,0)');
+        ctx.fillStyle = g;
+        ctx.beginPath(); ctx.arc(p.x,p.y,26*state.view.zoom,0,Math.PI*2); ctx.fill();
+      }
+      ctx.beginPath();
+      ctx.moveTo(esp.x, esp.y); ctx.lineTo(p.x, p.y);
+      ctx.strokeStyle = attackingThis ? 'rgba(255,80,80,0.7)' : (isTarget ? 'rgba(255,255,255,0.35)' : 'rgba(255,255,255,0.07)');
+      ctx.lineWidth = 1; ctx.stroke();
+      ctx.beginPath(); ctx.arc(p.x, p.y, r, 0, Math.PI*2);
+      if(attackingThis) ctx.fillStyle = '#ff4040';
+      else ctx.fillStyle = t.selected ? '#fff' : '#888';
+      ctx.fill();
+      ctx.beginPath(); ctx.arc(p.x, p.y, r+3, 0, Math.PI*2);
+      ctx.strokeStyle = attackingThis ? 'rgba(255,80,80,0.9)' : (isTarget ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.18)');
+      ctx.lineWidth = 1; ctx.stroke();
+      if(state.view.zoom > 0.35){
+        ctx.fillStyle = attackingThis ? '#ff7070' : (t.selected ? '#fff' : '#aaa');
+        ctx.font = '10px Consolas, monospace';
+        ctx.textAlign = 'left';
+        var label = '[' + t.id + '] ' + t.ssid;
+        if(t.ssid.length > 14) label = label.substring(0, 17) + '…';
+        var lx = p.x + r + 6;
+        var tw = ctx.measureText(label).width;
+        if(lx + tw > W - 6) lx = p.x - r - 6 - tw;
+        ctx.fillText(label, lx, p.y - 2);
+        ctx.fillStyle = attackingThis ? '#c66' : '#666';
+        ctx.font = '9px Consolas, monospace';
+        ctx.fillText('ch ' + t.ch + ' · ' + t.rssi, lx, p.y + 11);
+      }
+    }
+  }
+  function drawPackets(){
+    var esp = w2s(0,0);
+    for(var i=state.packets.length-1;i>=0;i--){
+      var p = state.packets[i];
+      p.t += p.speed;
+      if(p.t >= 1){
+        if(p.targetId !== null){
+          for(var k=0;k<state.targets.length;k++)
+            if(state.targets[k].id === p.targetId) state.targets[k].flash = 1;
+        }
+        state.packets.splice(i,1); continue;
+      }
+      var wx = p.sx + (p.tx - p.sx) * p.t;
+      var wy = p.sy + (p.ty - p.sy) * p.t;
+      var s = w2s(wx, wy);
+      var tx2 = p.sx + (p.tx - p.sx) * Math.max(0, p.t - 0.06);
+      var ty2 = p.sy + (p.ty - p.sy) * Math.max(0, p.t - 0.06);
+      var sTail = w2s(tx2, ty2);
+      var isTarget = p.targetId !== null;
+      ctx.beginPath();
+      ctx.moveTo(sTail.x, sTail.y); ctx.lineTo(s.x, s.y);
+      ctx.strokeStyle = isTarget ? 'rgba(255,80,80,0.95)' : 'rgba(255,255,255,0.95)';
+      ctx.lineWidth = 2.5; ctx.stroke();
+      ctx.beginPath(); ctx.arc(s.x, s.y, 3, 0, Math.PI*2);
+      ctx.fillStyle = isTarget ? '#ff6060' : '#fff'; ctx.fill();
+    }
+  }
+  function drawAttackRings(){
+    var esp = w2s(0,0);
+    var hasTargets = false;
+    for(var i=0;i<state.targets.length;i++)
+      if(state.targets[i].selected && !state.targets[i].hidden){hasTargets=true;break;}
+    if(state.attacking && !hasTargets && Math.random() < 0.08){
+      state.attackRings.push({r:20, alpha:0.6});
+    }
+    for(var i=state.attackRings.length-1;i>=0;i--){
+      var r = state.attackRings[i];
+      r.r += 3; r.alpha -= 0.018;
+      if(r.alpha <= 0 || r.r > Math.max(W,H)){
+        state.attackRings.splice(i,1); continue;
+      }
+      ctx.beginPath(); ctx.arc(esp.x, esp.y, r.r, 0, Math.PI*2);
+      ctx.strokeStyle = 'rgba(255,80,80,' + r.alpha + ')';
+      ctx.lineWidth = 1.2; ctx.stroke();
+    }
+  }
+
+  function hitTest(sx,sy){
+    var best=null, bestD=Infinity;
+    for(var i=0;i<state.targets.length;i++){
+      var t = state.targets[i];
+      if(t.hidden) continue;
+      var p = w2s(t.wx, t.wy);
+      var d = Math.hypot(p.x - sx, p.y - sy);
+      var r = Math.max(28, (t.selected ? 10 : 8) * state.view.zoom);
+      if(d < r && d < bestD){ best = t; bestD = d; }
+    }
+    return best;
+  }
+
+  var panStart = null;
+  var pinchStartDist = 0;
+  var pinchStartZoom = 1;
+  var longPressTimer = null;
+
+  function distance(t1,t2){
+    return Math.hypot(t2.clientX-t1.clientX, t2.clientY-t1.clientY);
+  }
+
+  function onTouchStart(e){
+    if(e.target.closest && e.target.closest('.bottombar,.topbar,.fabs,.sheet,.legend')) return;
+    e.preventDefault();
+    if(e.touches.length === 1){
+      var t = e.touches[0];
+      var rect = canvas.getBoundingClientRect();
+      var x = t.clientX - rect.left, y = t.clientY - rect.top;
+      panStart = { x: x, y: y, vx: state.view.x, vy: state.view.y, moved: false };
+      clearTimeout(longPressTimer);
+      longPressTimer = setTimeout(function(){
+        if(!panStart) return;
+        if(!panStart.moved){
+          var hit = hitTest(panStart.x, panStart.y);
+          if(hit) openPointSheet(hit);
+        }
+      }, 500);
+    } else if(e.touches.length === 2){
+      clearTimeout(longPressTimer);
+      panStart = null;
+      pinchStartDist = distance(e.touches[0], e.touches[1]);
+      pinchStartZoom = state.view.zoom;
+    }
+  }
+  function onTouchMove(e){
+    if(e.target.closest && e.target.closest('.bottombar,.topbar,.fabs,.sheet,.legend')) return;
+    e.preventDefault();
+    if(e.touches.length === 1 && panStart){
+      var t = e.touches[0];
+      var rect = canvas.getBoundingClientRect();
+      var x = t.clientX - rect.left, y = t.clientY - rect.top;
+      var dx = x - panStart.x;
+      var dy = y - panStart.y;
+      if(Math.abs(dx) > 6 || Math.abs(dy) > 6){
+        panStart.moved = true;
+        clearTimeout(longPressTimer);
+      }
+      state.view.x = panStart.vx - dx / state.view.zoom;
+      state.view.y = panStart.vy - dy / state.view.zoom;
+    } else if(e.touches.length === 2 && pinchStartDist > 0){
+      var d = distance(e.touches[0], e.touches[1]);
+      var factor = d / pinchStartDist;
+      state.view.zoom = Math.max(state.view.minZoom, Math.min(state.view.maxZoom, pinchStartZoom * factor));
+      updateZoomLabel();
+    }
+  }
+  function onTouchEnd(e){
+    clearTimeout(longPressTimer);
+    if(e.touches.length === 0){
+      if(panStart && !panStart.moved){
+        var t = e.changedTouches[0];
+        if(t){
+          var rect = canvas.getBoundingClientRect();
+          var x = t.clientX - rect.left, y = t.clientY - rect.top;
+          var hit = hitTest(x, y);
+          if(hit) openPointSheet(hit);
+        }
+      }
+      panStart = null;
+      pinchStartDist = 0;
+    }
+  }
+  canvas.addEventListener('touchstart', onTouchStart, {passive:false});
+  canvas.addEventListener('touchmove', onTouchMove, {passive:false});
+  canvas.addEventListener('touchend', onTouchEnd);
+  canvas.addEventListener('touchcancel', onTouchEnd);
+
+  var mDown = null;
+  canvas.addEventListener('mousedown', function(e){
+    if(e.target.closest && e.target.closest('.bottombar,.topbar,.fabs,.sheet')) return;
+    var rect = canvas.getBoundingClientRect();
+    mDown = { x: e.clientX-rect.left, y: e.clientY-rect.top, vx: state.view.x, vy: state.view.y, moved:false };
+  });
+  window.addEventListener('mousemove', function(e){
+    if(!mDown) return;
+    var rect = canvas.getBoundingClientRect();
+    var x = e.clientX-rect.left, y = e.clientY-rect.top;
+    var dx = x - mDown.x, dy = y - mDown.y;
+    if(Math.abs(dx) > 5 || Math.abs(dy) > 5) mDown.moved = true;
+    state.view.x = mDown.vx - dx / state.view.zoom;
+    state.view.y = mDown.vy - dy / state.view.zoom;
+  });
+  window.addEventListener('mouseup', function(e){
+    if(!mDown) return;
+    if(!mDown.moved){
+      var hit = hitTest(mDown.x, mDown.y);
+      if(hit) openPointSheet(hit);
+    }
+    mDown = null;
+  });
+  canvas.addEventListener('wheel', function(e){
+    e.preventDefault();
+    var rect = canvas.getBoundingClientRect();
+    var mx = e.clientX-rect.left, my = e.clientY-rect.top;
+    var before = s2w(mx,my);
+    var factor = e.deltaY < 0 ? 1.15 : 1/1.15;
+    state.view.zoom = Math.max(state.view.minZoom, Math.min(state.view.maxZoom, state.view.zoom * factor));
+    var after = s2w(mx,my);
+    state.view.x += after.x - before.x;
+    state.view.y += after.y - before.y;
+    updateZoomLabel();
+  }, {passive:false});
+
+  function updateZoomLabel(){
+    lgZoom.textContent = state.view.zoom.toFixed(2) + 'x';
+  }
+  function resetView(){ state.view.x = 0; state.view.y = 0; state.view.zoom = 1; updateZoomLabel(); }
+  function fitAll(){
+    var pts = [{wx:0, wy:0}];
+    for(var i=0;i<state.targets.length;i++){
+      if(!state.targets[i].hidden) pts.push({wx: state.targets[i].wx, wy: state.targets[i].wy});
+    }
+    var minX=pts[0].wx, maxX=pts[0].wx, minY=pts[0].wy, maxY=pts[0].wy;
+    for(var i=1;i<pts.length;i++){
+      if(pts[i].wx < minX) minX = pts[i].wx;
+      if(pts[i].wx > maxX) maxX = pts[i].wx;
+      if(pts[i].wy < minY) minY = pts[i].wy;
+      if(pts[i].wy > maxY) maxY = pts[i].wy;
+    }
+    var cx = (minX+maxX)/2, cy = (minY+maxY)/2;
+    var spanX = (maxX-minX) + 200, spanY = (maxY-minY) + 200;
+    var z = Math.min(W/spanX, H/spanY);
+    z = Math.max(state.view.minZoom, Math.min(state.view.maxZoom, z));
+    state.view.zoom = z; state.view.x = cx; state.view.y = cy;
+    updateZoomLabel();
+  }
+
+  var backdrop = $('backdrop');
+  var sheets = { menu: $('sheetMenu'), log: $('sheetLog'), point: $('sheetPoint') };
+
+  function openSheet(name){
+    closeAllSheets();
+    sheets[name].classList.add('on');
+    backdrop.classList.add('on');
+  }
+  function closeAllSheets(){
+    Object.keys(sheets).forEach(function(k){ sheets[k].classList.remove('on'); });
+    backdrop.classList.remove('on');
+  }
+  backdrop.addEventListener('click', closeAllSheets);
+  $('closeMenu').addEventListener('click', closeAllSheets);
+  $('closeLog').addEventListener('click', closeAllSheets);
+  $('closePoint').addEventListener('click', closeAllSheets);
+
+  Object.keys(sheets).forEach(function(name){
+    var sheet = sheets[name];
+    var startY = null;
+    sheet.addEventListener('touchstart', function(e){
+      if(!e.target.closest('.sheet-handle,.sheet-head')) return;
+      startY = e.touches[0].clientY;
+    }, {passive:true});
+    sheet.addEventListener('touchmove', function(e){
+      if(startY === null) return;
+      var dy = e.touches[0].clientY - startY;
+      if(dy > 0) sheet.style.transform = 'translateY('+dy+'px)';
+    }, {passive:true});
+    sheet.addEventListener('touchend', function(e){
+      if(startY === null) return;
+      var endY = e.changedTouches[0].clientY;
+      var dy = endY - startY;
+      sheet.style.transform = '';
+      startY = null;
+      if(dy > 80) closeAllSheets();
+    });
+  });
+
+  function openPointSheet(t){
+    state.pointTarget = t;
+    $('ptSsid').textContent = t.ssid;
+    $('ptTitle').textContent = 'Точка [' + t.id + ']';
+    var html = 'ID: <b>'+t.id+'</b> · Канал: <b>'+t.ch+'</b><br>';
+    html += 'RSSI: <b>'+t.rssi+' dBm</b>';
+    if(t.mac) html += '<br>MAC: <b>'+t.mac+'</b>';
+    if(t.selected) html += '<br><span style="color:#fff">● цель</span>';
+    $('ptInfo').innerHTML = html;
+    openSheet('point');
+  }
+
+  $('ptSelect').addEventListener('click', function(){
+    if(!state.pointTarget) return;
+    var id = state.pointTarget.id;
+    sendQuiet('deselect ap');
+    send('select ap ' + id);
+    markSelected(id);
+    closeAllSheets();
+  });
+  $('ptDeselect').addEventListener('click', function(){
+    if(!state.pointTarget) return;
+    var id = state.pointTarget.id;
+    send('deselect ap ' + id);
+    for(var i=0;i<state.targets.length;i++)
+      if(state.targets[i].id === id) state.targets[i].selected = false;
+    updateCounters();
+    closeAllSheets();
+  });
+  $('ptDeauth').addEventListener('click', function(){
+    if(!state.pointTarget) return;
+    var id = state.pointTarget.id;
+    var ssid = state.pointTarget.ssid;
+    sendQuiet('stop attack');
+    sendQuiet('deselect ap');
+    sendQuiet('select ap ' + id);
+    setTimeout(function(){
+      send(attackCmd());
+      append('Deauth → [' + id + '] ' + ssid + '\n','info');
+    }, 250);
+    markSelected(id);
+    closeAllSheets();
+  });
+  $('ptCenter').addEventListener('click', function(){
+    if(!state.pointTarget) return;
+    state.view.x = state.pointTarget.wx;
+    state.view.y = state.pointTarget.wy;
+    closeAllSheets();
+  });
+  $('ptCopyMac').addEventListener('click', function(){
+    if(!state.pointTarget || !state.pointTarget.mac){ alert('У точки нет MAC'); return; }
+    var mac = state.pointTarget.mac;
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(mac).then(function(){
+        append('MAC copied: '+mac+'\n','info');
+      }).catch(function(){
+        append('MAC: '+mac+'\n','info');
+      });
+    } else {
+      append('MAC: '+mac+'\n','info');
+    }
+    closeAllSheets();
+  });
+  $('ptHide').addEventListener('click', function(){
+    if(!state.pointTarget) return;
+    state.pointTarget.hidden = true;
+    state.pointTarget.selected = false;
+    updateCounters();
+    append('Hidden: ['+state.pointTarget.id+'] '+state.pointTarget.ssid+'\n','sys');
+    closeAllSheets();
+  });
+
+  function attackCmd(extra){
+    var base = 'attack deauth' + (extra ? ' ' + extra : '');
+    var to = parseInt(cfg.attackTimeout);
+    if(to > 0) base += ' -t ' + to;
+    if(cfg.attackNoOutput) base += ' nooutput';
+    return base;
+  }
+
+  function bc(id, fn){ var el=$(id); if(el) el.addEventListener('click', fn); }
+
+  $('tbConnect').addEventListener('click', function(){
+    if(state.connected) disconnect();
+    else connect();
+  });
+
+  bc('fabScan', function(){ sendScanAP(); });
+  bc('fabFit', fitAll);
+  bc('fabReset', resetView);
+  bc('fabStop', function(){ send('stop all'); });
+  bc('fabDeauth', function(){ send(attackCmd()); });
+
+  bc('bbSelect', function(){
+    var current = null;
+    for(var i=0;i<state.targets.length;i++){
+      if(state.targets[i].selected){ current = state.targets[i]; break; }
+    }
+    if(current){
+      send('deselect ap ' + current.id);
+      current.selected = false;
+      updateCounters();
+      append('Снята цель: ['+current.id+'] '+current.ssid+'\n','sys');
+    } else {
+      append('Нет выбранной цели.\n','sys');
+    }
+  });
+  bc('bbDeauth', function(){ send(attackCmd()); });
+  bc('bbLog', function(){ openSheet('log'); });
+  bc('bbMenu', function(){ openSheet('menu'); });
+
+  bc('mBtnConnect', connect);
+  bc('mBtnDisconnect', disconnect);
+
+  function scanTimeoutArg(){
+    var t = parseInt(cfg.scanTimeout);
+    return (t > 0 && t <= 120) ? (' -t ' + (t*1000)) : '';
+  }
+  function scanChannelArg(){
+    var c = parseInt(cfg.scanChannel);
+    return (c > 0 && c <= 14) ? (' -ch ' + c) : '';
+  }
+  function scanContinueArg(){
+    return cfg.scanContinue ? ' -c 5000' : '';
+  }
+  function sendScanAP(){
+    send('scan aps' + scanTimeoutArg() + scanChannelArg() + scanContinueArg());
+  }
+  function sendScanSta(){
+    send('scan stations' + scanTimeoutArg() + scanChannelArg() + scanContinueArg());
+  }
+
+  bc('mScanAP', sendScanAP);
+  bc('mScanSta', sendScanSta);
+  bc('mScanAll', function(){ send('scan all' + scanTimeoutArg() + scanChannelArg() + scanContinueArg()); });
+  bc('mStopScan', function(){ send('stop scan'); });
+  bc('mShowAP', function(){ send('show aps'); });
+  bc('mShowSta', function(){ send('show stations'); });
+  bc('mShowNames', function(){ send('show names'); });
+  bc('mShowSelected', function(){ send('show selected'); });
+  bc('mAutoScan', function(){
+    if(state.autoScan.enabled) stopAutoScan();
+    else startAutoScan();
+  });
+
+  bc('mDeauth', function(){ send(attackCmd()); });
+  bc('mDeauthAll', function(){ send('attack deauthall' + (cfg.attackNoOutput ? ' nooutput' : '')); });
+  bc('mAttackBeacon', function(){ send('attack beacon' + (cfg.attackNoOutput ? ' nooutput' : '')); });
+  bc('mAttackProbe', function(){ send('attack probe' + (cfg.attackNoOutput ? ' nooutput' : '')); });
+  bc('mAttackStatus', function(){ send('attack status'); });
+  bc('mStopAttack', function(){ send('stop attack'); });
+  bc('mStopAll', function(){ send('stop all'); });
+  bc('mAttackStatusOn', function(){ send('attack status on'); });
+  bc('mAttackStatusOff', function(){ send('attack status off'); });
+
+  bc('mAddSsid', function(){
+    var name = $('mSsidName').value.trim();
+    if(!name){ append('Enter SSID name\n','err'); return; }
+    if(name.length > 31){ append('SSID max 31 chars\n','err'); return; }
+    var count = parseInt($('mSsidCount').value) || 1;
+    if(count < 1) count = 1;
+    if(count > 60) count = 60;
+    var wpa2 = $('mSsidWpa2').checked;
+    var force = $('mSsidForce').checked;
+    var safe = name.replace(/"/g, '');
+    var cmd = 'add ssid "' + safe + '" -cl ' + count + (wpa2 ? ' -wpa2' : '') + (force ? ' -f' : '');
+    send(cmd);
+    append('Added SSID: "' + safe + '" x' + count + (wpa2 ? ' WPA2' : '') + (force ? ' F' : '') + '\n','info');
+    cfg.ssidCount = count; cfg.ssidWpa2 = wpa2; cfg.ssidForce = force; saveCfg();
+    setTimeout(function(){ send('show ssids'); }, 300);
+  });
+  bc('mAddSsidSelected', function(){ send('add ssid -s'); });
+  bc('mCloneAp', function(){
+    var id = parseInt($('mCloneApId').value);
+    if(isNaN(id)){ append('Enter AP ID\n','err'); return; }
+    var force = $('mSsidForce').checked;
+    send('add ssid -ap ' + id + (force ? ' -f' : ''));
+  });
+  bc('mRandomSsid', function(){
+    var iv = parseInt(cfg.randomInterval) || 10;
+    if(iv < 5) iv = 5;
+    if(iv > 60) iv = 60;
+    send('enable random ' + iv);
+    append('Random SSID ON (' + iv + 's)\n','info');
+  });
+  bc('mRandomOff', function(){ send('disable random'); });
+  bc('mRefreshSsid', function(){
+    state.ssidList = [];
+    renderSsidList();
+    send('show ssids');
+  });
+  bc('mRemoveSsid', function(){
+    var id = parseInt($('mRemoveSsidId').value);
+    if(isNaN(id)){ append('Enter SSID ID\n','err'); return; }
+    send('remove ssid ' + id);
+    state.ssidList = state.ssidList.filter(function(x){return x.id !== id;});
+    renderSsidList();
+  });
+  bc('mRemoveAllSsid', function(){
+    send('remove ssids all');
+    state.ssidList = [];
+    renderSsidList();
+  });
+  bc('mSaveSsid', function(){ send('save ssids'); });
+  bc('mLoadSsid', function(){ send('load ssids'); });
+
+  bc('mSetSsid', function(){
+    var ssid = $('mSsid').value.trim();
+    if(!ssid){ append('Enter SSID\n','err'); return; }
+    if(ssid.length > 31){ append('SSID max 31\n','err'); return; }
+    var safe = ssid.replace(/"/g, '');
+    send('set ssid "' + safe + '"');
+  });
+  bc('mSetPass', function(){
+    var pass = $('mPass').value;
+    if(pass.length < 8){ append('Password min 8\n','err'); return; }
+    if(pass.length > 31){ append('Password max 31\n','err'); return; }
+    var safe = pass.replace(/"/g, '');
+    send('set password "' + safe + '"');
+  });
+  bc('mGetSsid', function(){ send('get ssid'); });
+  bc('mSaveSettings', function(){ send('save settings'); });
+
+  bc('mLedOff', function(){ send('led #000000'); });
+  bc('mLedRed', function(){ send('led #ff0000'); });
+  bc('mLedGreen', function(){ send('led #00ff00'); });
+  bc('mLedWhite', function(){ send('led #ffffff'); });
+
+  bc('mInfo', function(){ send('sysinfo'); });
+  bc('mSave', function(){ send('save'); });
+  bc('mReboot', function(){ send('reboot'); });
+  bc('mHelp', function(){ send('help'); });
+  bc('mClear', function(){
+    state.targets=[]; state.packets=[]; state.attackRings=[]; state.ssidList=[];
+    updateCounters(); renderSsidList();
+    send('clear');
+  });
+  bc('mSend', function(){
+    var c = $('mCustom').value.trim();
+    if(!c) return;
+    send(c);
+    $('mCustom').value = '';
+    var mm = c.match(/^select ap (\d+)/);
+    if(mm) markSelected(parseInt(mm[1]));
+  });
+  bc('mClearLog', clearLog);
+
+  function bindCfgInput(id, key, type){
+    var el = $(id);
+    if(!el) return;
+    if(type === 'bool'){
+      el.checked = !!cfg[key];
+      el.addEventListener('change', function(){
+        cfg[key] = el.checked; saveCfg();
+      });
+    } else {
+      el.value = cfg[key];
+      el.addEventListener('change', function(){
+        var v = parseInt(el.value);
+        if(isNaN(v)) v = CFG_DEFAULTS[key];
+        cfg[key] = v; saveCfg();
+      });
+    }
+  }
+  bindCfgInput('cfgScanTimeout', 'scanTimeout', 'num');
+  bindCfgInput('cfgScanContinue', 'scanContinue', 'bool');
+  bindCfgInput('cfgScanChannel', 'scanChannel', 'num');
+  bindCfgInput('cfgAttackTimeout', 'attackTimeout', 'num');
+  bindCfgInput('cfgAttackNoOutput', 'attackNoOutput', 'bool');
+  bindCfgInput('cfgRandomInterval', 'randomInterval', 'num');
+  bindCfgInput('mSsidCount', 'ssidCount', 'num');
+  bindCfgInput('mSsidWpa2', 'ssidWpa2', 'bool');
+  bindCfgInput('mSsidForce', 'ssidForce', 'bool');
+
+  resize();
+  append('Deauther Mobile\n','info');
+  renderSsidList();
+  updateZoomLabel();
+  draw();
+})();
+</script>
+
+</body>
+</html>
